@@ -1,0 +1,146 @@
+{
+  "name": "Hatchson's Quest Mod Manager Store",
+  "updated": "2026-11-05T00:51:37Z",
+  "games": [
+    {
+      "id": "orion-drift",
+      "name": "Orion Drift",
+      "package": "com.AnotherAxiom.A2",
+      "engine": "ue"
+    },
+    {
+      "id": "gorilla-tag",
+      "name": "Gorilla Tag",
+      "package": "com.AnotherAxiom.GorillaTag",
+      "engine": "unity"
+    },
+    {
+      "id": "beat-saber",
+      "name": "Beat Saber",
+      "package": "com.beatgames.beatsaber",
+      "engine": "unity"
+    },
+    {
+      "id": "bonelab",
+      "name": "BONELAB",
+      "package": "com.StressLevelZero.BONELAB",
+      "engine": "unity"
+    },
+    {
+      "id": "blade-and-sorcery",
+      "name": "Blade & Sorcery: Nomad",
+      "package": "com.warpfrog.bladeandsorcery",
+      "engine": "unity"
+    }
+  ],
+  "mods": [
+    {
+      "id": "Driftrinth-Client",
+      "name": "Driftrinth Client",
+      "creator": "VirtualStripes",
+      "version": "4.3",
+      "summary": "Le Best Mod Menu For Orion Drift",
+      "description": "Best mod menu for OD of all time.",
+      "game": "orion-drift",
+      "tags": [],
+      "updated": "2026-11-01T05:12:22Z",
+      "files": [
+        {
+          "name": "Driftrinth-Client.zip",
+          "url": "mods/Driftrinth-Client/Driftrinth-Client.zip",
+          "bytes": 353175,
+          "sha256": "142ecd0d6dbcc2ec2303f802c92f573745921009d2aa3fa4ef9c93e73b042fb2"
+        }
+      ],
+      "fp": "afc337f8ddcfdfe1d7974f095e6f4e98cd5a4dd802ca4c71c2caf422aa177751"
+    },
+    {
+      "id": "cosmeticz",
+      "name": "CosmeticZ",
+      "creator": "Meimei",
+      "version": "1.0.0",
+      "summary": "Evero one can seenit",
+      "description": "Use this",
+      "game": "orion-drift",
+      "tags": [
+        "Fun"
+      ],
+      "updated": "2026-11-05T00:50:53Z",
+      "files": [
+        {
+          "name": "cosmeticz.zip",
+          "url": "mods/cosmeticz/cosmeticz.zip",
+          "bytes": 105101,
+          "sha256": "1456313466c295ef86b1ea0e3913a4842cd65151efbd346c3e26ab4aeab59556"
+        }
+      ],
+      "fp": "9b7745e6d6f04a46f8340c0731b895cf3bd52972bbb27a7268eee2fcac469fd1"
+    },
+    {
+      "id": "every-ending-v1-6",
+      "name": "Every Ending V1.6",
+      "creator": "onslaughtghosty",
+      "version": "1.6",
+      "summary": "Pretty good mod menu",
+      "description": "Has rainbow color and way more",
+      "game": "orion-drift",
+      "tags": [
+        "fun"
+      ],
+      "updated": "2026-11-05T00:51:37Z",
+      "files": [
+        {
+          "name": "every-ending-v1-6.zip",
+          "url": "mods/every-ending-v1-6/every-ending-v1-6.zip",
+          "bytes": 481119,
+          "sha256": "5e7a833e5dec4236320c2dd9820e67e86faaee4964cb1ddec091945ce7dd0db0"
+        }
+      ],
+      "fp": "a2ef9157d2782efac6b082f3fe5dc8c17134a9dbefea22f7d2961e5074c52e12"
+    },
+    {
+      "id": "backflip-mod",
+      "name": "Backflip Mod",
+      "creator": "Hatchson",
+      "version": "1.0.0",
+      "summary": "Adds a backflip move",
+      "description": "Adds a backflip move to Orion Drift.",
+      "game": "orion-drift",
+      "tags": [
+        "Fun"
+      ],
+      "updated": "2026-11-05T00:51:37Z",
+      "files": [
+        {
+          "name": "backflip-mod.zip",
+          "url": "mods/backflip-mod/backflip-mod.zip",
+          "bytes": 23729,
+          "sha256": "5d0a0e82ad89aa444ab531aecca9913970b9704c317304bce680c8cdf3768bc1"
+        }
+      ],
+      "fp": "b2227812a755a28fab327ed6149dd588aec22c1cf847c245536c0fa52e25dd6d"
+    },
+    {
+      "id": "meimei-client",
+      "name": "MeiMei Client",
+      "creator": "Meimei",
+      "version": "1.0.0",
+      "summary": "Mod menu for Orion Drift",
+      "description": "Mod menu for Orion Drift by Meimei.",
+      "game": "orion-drift",
+      "tags": [
+        "Fun"
+      ],
+      "updated": "2026-11-05T00:51:37Z",
+      "files": [
+        {
+          "name": "meimei-client.zip",
+          "url": "mods/meimei-client/meimei-client.zip",
+          "bytes": 500951,
+          "sha256": "3adbf155dac631dbc45c9ab6e6178f231375a7b2ac388ca6773f3df4e2f43849"
+        }
+      ],
+      "fp": "d6e8f35a8a2d1c156b0740d2767fd77d3d92ffdf78030b0f7a05e12b9e95ec86"
+    }
+  ]
+}
