@@ -2,11 +2,12 @@
   "version": 1,
   "entries": [
     {
-      "h": "3009f88b827e2fe586fa9929f41d0a426ddf52b2bd264336ca299fb86468afdc",
-      "ts": 1794167073,
-      "user": "1031672009752596490",
-      "name": "3amcash3",
-      "role": "buyer"
+      "h": "d6eeba22de75e958e305df8c96e6626cb6bb9e3b89eb846af227c42258679055",
+      "ts": 1794172219,
+      "user": "777",
+      "name": "PrefBuyer",
+      "role": "buyer",
+      "logUpload": true
     }
   ]
 }
