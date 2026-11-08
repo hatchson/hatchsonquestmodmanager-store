@@ -8,6 +8,14 @@
       "name": "PrefBuyer",
       "role": "buyer",
       "logUpload": true
+    },
+    {
+      "h": "a119073c29cb8b613e434fd3665b8a8b59bf0267efe04fc1cf71b0262971d05e",
+      "ts": 1794172221,
+      "user": "777",
+      "name": "PrefBuyer",
+      "role": "buyer",
+      "logUpload": true
     }
   ]
 }
