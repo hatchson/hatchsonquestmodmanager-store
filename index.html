@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#0b0b0d">
 <meta name="robots" content="noindex">
-<title>Publish a Mod — Hatchson's Quest Mod Manager</title>
+<title>Publish a Mod â€” Hatchson's Quest Mod Manager</title>
 <link rel="icon" href="logo.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
@@ -103,6 +103,10 @@
   .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
   .chip { font:0.75rem var(--font-mono); padding:2px 8px; border-radius:999px; background:var(--surface-raised); border:1px solid var(--border); color:var(--ok); overflow-wrap:anywhere; }
 
+  /* Verification */
+  .verify-code-row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+  .verify-code { font:700 1.35rem var(--font-mono); letter-spacing:.3em; padding:10px 16px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface-raised); color:var(--text); user-select:all; overflow-wrap:anywhere; }
+
   /* Notices */
   .notice { padding:10px 12px; border-radius:var(--radius-sm); font-size:0.875rem; border:1px solid var(--border); background:var(--surface-raised); }
   .notice.err { border-color:rgba(255,77,85,.4); background:rgba(255,77,85,.07); color:#ffb3b6; }
@@ -173,6 +177,28 @@
       <div><h2>Submissions<span class="count" id="subsCount" hidden></span></h2><p class="step-sub" id="subsSub">Mods sent in by guests. Approve to put one in the store.</p></div>
       <div class="notice err" id="subsErr" hidden></div>
       <div id="subs"></div>
+    </section>
+
+    <section class="card" id="verifyCard">
+      <div class="step-head">
+        <span class="step-num">V</span>
+        <div><h2>Verification</h2><p class="step-sub" id="verifySub">Buyers and boosters verify through Discord. Uploading never requires it.</p></div>
+      </div>
+      <div class="step-body">
+        <div id="verifyPending" hidden>
+          <div class="verify-code-row">
+            <code class="verify-code" id="verifyCode">â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢</code>
+            <button class="btn btn-ghost" id="verifyCopy" type="button">Copy code</button>
+          </div>
+          <p class="hint">Send <code id="verifyCmd">/verify</code> in the Discord server. This page unlocks the moment the bot writes it.</p>
+          <p class="hint" id="verifyLeft"></p>
+        </div>
+        <div class="notice good" id="verifyDone" hidden></div>
+        <div class="actions" id="verifyActions">
+          <button class="btn btn-primary" id="verifyStart" type="button">Verify with Discord</button>
+          <span class="hint" id="verifyStatus"></span>
+        </div>
+      </div>
     </section>
 
     <section class="card step active" id="step1">
@@ -294,7 +320,7 @@
 // GitHub Pages mode (LOCAL): this page has no server and no password. The
 // manifest.json and the zips under mods/ that Pages already serves ARE the store,
 // so "Release" builds a release-bundle.zip which you extract over your clone of
-// the repository and push. Nobody but you can write to Pages anyway — pushing is
+// the repository and push. Nobody but you can write to Pages anyway â€” pushing is
 // the write API, and it is the only one this page needs.
 // Flip LOCAL to false only if you deploy the optional upload Worker (see
 // README.md): it takes a password and commits for you.
@@ -307,6 +333,141 @@ let packed = null, mods = [], subs = [], guest = false, games = [], manifestDoc 
 const gameInfo = id => games.find(g => g.id === id) || null;
 const gameLabel = id => { const g = gameInfo(id); return g ? g.name : id || ""; };
 const engineLabel = id => { const g = gameInfo(id); return g && g.engine === "unity" ? "Unity" : g && g.engine === "ue" ? "Unreal Engine" : ""; };
+
+// ---------- Verification ----------
+// The manager mints the same 8-character code on every launch; the Discord bot
+// writes sha256(code) into verified.json when someone runs /verify. This page
+// hashes its own code and waits for the bot's blessing. Nothing here is a lock
+// on the files â€” manifest.json is public either way â€” it is a name on the door:
+// Delete and Update only appear for the owner, and the badge means "this
+// browser is a verified buyer".
+const VERIFIED_URL = "verified.json";
+const VERIFY_TTL = 600;      // seconds an approval lives before the bot prunes it
+const VERIFY_SKEW = 600;     // seconds of clock drift we forgive on both sides
+const STORE_OWNER = "1247173440780370035";
+const VERIFY_ROLES = ["1568626007974346832", "1568626119589232790"];
+const CODE_SET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // no I, L, O, 0, 1
+const BUNDLE_KEY = "hqm.verified";
+
+let myCode = null, myHash = null, verifyEntry = null, verifyTimer = null, verifying = false;
+
+const randBytes = n => {
+  const b = new Uint8Array(n);
+  (crypto.getRandomValues ? crypto.getRandomValues(b) : Array.from(b, (_, i) => (b[i] = (Math.random() * 256) | 0)));
+  return b;
+};
+const b64url = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const hex = buf => Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+const sha256text = async s => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)));
+
+async function verifyCode() {
+  if (!myCode) {
+    // One code per browser session window: keep the same letters while the
+    // approval can still be alive, otherwise the cached badge could never match
+    // the hash the bot already wrote.
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem("hqm.code") || "null"); } catch {}
+    if (saved && saved.code && entryFresh({ ts: saved.ts }, Math.floor(Date.now() / 1000))) {
+      myCode = saved.code;
+      myHash = await sha256text(myCode);
+      return myCode;
+    }
+    // Draw straight from the safe set: base64's alphabet still carries I, l, O
+    // and 0, and filtering after the fact leaves the code short.
+    const pick = () => CODE_SET[randBytes(1)[0] % CODE_SET.length];
+    let code = "", digits = 0;
+    while (code.length < 8) {
+      const c = pick();
+      if (c >= "0" && c <= "9") { if (digits >= 2) continue; digits++; }
+      code += c;
+    }
+    myCode = code;
+    myHash = await sha256text(myCode);
+    try { localStorage.setItem("hqm.code", JSON.stringify({ code: myCode, ts: Math.floor(Date.now() / 1000) })); } catch {}
+  }
+  return myCode;
+}
+
+const isVerified = () => !!verifyEntry;
+const isOwner = () => isVerified() && String(verifyEntry.user) === STORE_OWNER;
+const isVerifierRole = () => isVerified() && VERIFY_ROLES.includes(String(verifyEntry.user));
+
+// The bot stamps approvals with its own clock, so an entry can be a few seconds
+// "in the future" without meaning anything is wrong.
+const entryFresh = (e, now) => {
+  const age = now - e.ts;
+  return age >= -VERIFY_SKEW && age <= VERIFY_TTL + VERIFY_SKEW;
+};
+
+async function checkVerified() {
+  try {
+    const r = await fetch(`${VERIFIED_URL}?cb=${Date.now()}`, { cache: "no-store" });
+    if (!r.ok) return false;
+    const doc = await r.json();
+    const now = Math.floor(Date.now() / 1000);
+    const e = (doc.entries || []).find(x => x && x.h === myHash && entryFresh(x, now)) || null;
+    if (e) {
+      if (!verifyEntry) {
+        try { localStorage.setItem(BUNDLE_KEY, JSON.stringify(e)); } catch {}
+      }
+      verifyEntry = e;
+    } else {
+      if (verifyEntry) { try { localStorage.removeItem(BUNDLE_KEY); } catch {} verifyEntry = null; }
+    }
+    paintVerify();
+    return !!e;
+  } catch { return false; }
+}
+
+function paintVerify() {
+  const v = $("verifyCard");
+  if (!v) return;
+  const wasOwner = v.dataset.owner === "1";
+  const owner = isOwner();
+  if (verifyEntry) {
+    $("verifyDone").hidden = false;
+    $("verifyDone").textContent = `Verified as ${verifyEntry.name || verifyEntry.user} â€” ${verifyEntry.role || "buyer"}.`;
+    $("verifyPending").hidden = true;
+    $("verifyActions").hidden = true;
+    if ($("badge")) $("badge").hidden = false;
+    if ($("gateNote")) $("gateNote").hidden = true;
+  } else if (verifying) {
+    $("verifyDone").hidden = true;
+    $("verifyPending").hidden = false;
+    $("verifyActions").hidden = true;
+    $("verifyCode").textContent = myCode || "â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢";
+    $("verifyCmd").textContent = `/verify ${myCode || ""}`;
+    $("verifyLeft").textContent = `Approval lives for ${VERIFY_TTL / 60} minutes. Not verified yet â€” the bot writes it the moment you run the command.`;
+  } else {
+    $("verifyPending").hidden = true;
+    $("verifyDone").hidden = true;
+    $("verifyActions").hidden = false;
+  }
+  $("subsCard").hidden = !(owner && subs.length);
+  // The buttons only appear the moment ownership is proven, so repaint the list
+  // when that flips.
+  if (owner !== wasOwner) {
+    v.dataset.owner = owner ? "1" : "0";
+    renderMods();
+    renderSubs();
+  }
+}
+
+async function verifyLoop() {
+  await checkVerified();
+  clearInterval(verifyTimer);
+  verifyTimer = setInterval(checkVerified, 2500);
+}
+
+async function startVerify() {
+  verifying = true;
+  const code = await verifyCode();
+  $("verifyCode").textContent = code;
+  $("verifyCmd").textContent = `/verify ${code}`;
+  $("verifyCopy").onclick = () => navigator.clipboard?.writeText(code).catch(() => {});
+  paintVerify();
+  await verifyLoop();
+}
 
 function fillGames() {
   const sel = $("game"), keep = sel.value;
@@ -402,7 +563,7 @@ function saveBlob(blob, name) {
 
 const bundleSteps = `In your clone of the <b>hatchsonquestmodmanager-store</b> repo: extract the bundle
 straight into the repo folder so it covers <code>manifest.json</code>, then commit and push. On
-GitHub Desktop: <b>drag the files in → commit → push</b>. In a terminal:
+GitHub Desktop: <b>drag the files in â†’ commit â†’ push</b>. In a terminal:
 <code>Expand-Archive -Path release-bundle.zip -DestinationPath . -Force</code> then
 <code>git add -A; git commit -m "publish mod"; git push</code>. GitHub Pages goes live about a
 minute after the push.`;
@@ -412,10 +573,10 @@ async function enterLocal() {
   document.body.classList.add("local");
   $("loginForm").hidden = true;
   $("step1").querySelector("h2").textContent = "GitHub Pages mode";
-  $("s1sub").textContent = "No server, no password — pushing to the repo is the publish button.";
+  $("s1sub").textContent = "No server, no password â€” pushing to the repo is the publish button.";
   $("localNote").innerHTML = `This copy runs on plain GitHub Pages, so there is nothing to unlock:
     <b>manifest.json is public anyway</b>. The write permission lives in your GitHub account, not in this
-    page. Release builds a <b>release-bundle.zip</b> holding your mod and the updated manifest — you extract
+    page. Release builds a <b>release-bundle.zip</b> holding your mod and the updated manifest â€” you extract
     it over your clone of the store repo and push.`;
   $("localNote").hidden = false;
   $("lede").textContent = "Add your mod's zip, describe it, press Release, then drop the bundle into your store repo and push. It shows up in everyone's manager about a minute later.";
@@ -436,7 +597,7 @@ async function login(e) {
   try {
     const res = await api("/login");
     mods = res.mods; subs = res.submissions || [];
-    renderSubs(); $("subsCard").hidden = false;
+    renderSubs(); $("subsCard").hidden = !isOwner();
     $("s1sub").textContent = "Unlocked.";
     document.body.classList.remove("gate");
     $("loginForm").hidden = true;
@@ -481,7 +642,7 @@ function renderSubs() {
     const prev = existingFor(sItem.name);
     el.querySelector(".sub-name").textContent = `${sItem.name} v${sItem.version}`;
     el.querySelector('[data-k="when"]').textContent = when(sItem.submitted);
-    el.querySelector('[data-k="meta"]').textContent = `by ${sItem.creator} · ${size(sItem.bytes || 0)}${sItem.tags ? " · " + sItem.tags : ""}${prev ? ` · updates ${prev.name} v${prev.version}` : " · new mod"}`;
+    el.querySelector('[data-k="meta"]').textContent = `by ${sItem.creator} Â· ${size(sItem.bytes || 0)}${sItem.tags ? " Â· " + sItem.tags : ""}${prev ? ` Â· updates ${prev.name} v${prev.version}` : " Â· new mod"}`;
     el.querySelector('[data-k="text"]').textContent = [sItem.summary, sItem.about && sItem.about !== sItem.summary ? sItem.about : ""].filter(Boolean).join("\n\n");
     el.querySelector('[data-k="files"]').textContent = sItem.patches ? `Files: ${sItem.patches}` : "";
     const status = el.querySelector('[data-k="status"]');
@@ -677,7 +838,7 @@ function storeWhy(id, creator, name, fp, sha) {
 }
 
 // ---------- Step 2: zip ----------
-// Unreal mods: same rules as add_mod.py — keep only complete .utoc/.ucas/.pak
+// Unreal mods: same rules as add_mod.py â€” keep only complete .utoc/.ucas/.pak
 // sets, flattened into a fresh zip. Any other game: keep every file as-is.
 async function repack(file) {
   let src;
@@ -863,13 +1024,17 @@ function renderMods() {
   }
   for (const m of list) {
     const li = document.createElement("li");
+    // Only the owner sees the controls that change the store â€” everyone else
+    // gets the same list with no buttons to press.
+    const owner = isOwner();
     li.innerHTML = `<div class="mrow"><div><div class="mname"></div><small></small></div>
-      <div class="mbtns"><button class="btn btn-ghost btn-del" type="button" aria-label="Delete">Delete</button><button class="btn btn-ghost btn-upd" type="button" aria-expanded="false">Update <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></div></div>
+      ${owner ? `<div class="mbtns"><button class="btn btn-ghost btn-del" type="button" aria-label="Delete">Delete</button><button class="btn btn-ghost btn-upd" type="button" aria-expanded="false">Update <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></div>` : ``}</div>
       <div class="upd"><div><div class="upd-inner"></div></div></div>`;
     li.querySelector(".mname").textContent = m.name;
     const eng = engineLabel(m.game);
-    li.querySelector("small").textContent = `v${m.version} by ${m.creator}${m.game ? ` · ${gameLabel(m.game)}${eng ? ` (${eng})` : ""}` : ""}`;
+    li.querySelector("small").textContent = `v${m.version} by ${m.creator}${m.game ? ` Â· ${gameLabel(m.game)}${eng ? ` (${eng})` : ""}` : ""}`;
     const btn = li.querySelector(".btn-upd");
+    if (!owner) { ul.append(li); continue; }
     li.querySelector(".btn-del").onclick = () => removeMod(m, li);
     btn.onclick = () => {
       const open = !li.classList.contains("open");
@@ -1012,6 +1177,24 @@ async function loadManifest() {
 }
 loadManifest();
 if (LOCAL) enterLocal(); else update();
+
+// ---------- Verification boot ----------
+// A cached badge only buys the button back; the file is still checked before
+// anything is treated as owned, because the approval expires on its own clock.
+$("verifyStart").onclick = startVerify;
+(async () => {
+  await verifyCode();               // mint the code now so the panel is ready
+  try {
+    const cached = JSON.parse(localStorage.getItem(BUNDLE_KEY) || "null");
+    if (cached && cached.h === myHash && entryFresh(cached, Math.floor(Date.now() / 1000))) {
+      verifyEntry = cached;         // painted until the poll confirms it
+    } else {
+      localStorage.removeItem(BUNDLE_KEY);
+    }
+  } catch {}
+  paintVerify();
+  await verifyLoop();               // 404 just means "not yet â€” keep waiting"
+})();
 </script>
 </body>
 </html>
