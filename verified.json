@@ -2,27 +2,11 @@
   "version": 1,
   "entries": [
     {
-      "h": "f1b07cdc4849b276d9521bc630823716b293ca8ccb864513096feaa99fc74b8c",
-      "ts": 1794183856,
-      "user": "1527871456204165301",
-      "name": "xyzwithatophat",
-      "role": "buyer",
-      "logUpload": false
-    },
-    {
-      "h": "1b302294706ad837fba80d423a08bb36ddaee7640d0a257db8792cecf9c76cc2",
-      "ts": 1794183788,
-      "user": "1527871456204165301",
-      "name": "xyzwithatophat",
-      "role": "buyer",
-      "logUpload": false
-    },
-    {
-      "h": "75042aa399daed69aa32afee585592681d085c95180596b0248072d10c87e6c4",
-      "ts": 1794184265,
-      "user": "1527871456204165301",
-      "name": "xyzwithatophat",
-      "role": "buyer",
+      "h": "46498097a64aa3030b02f9142bf7d378d5625a731be8d0cf2d1c4beb7f5e3b18",
+      "ts": 1794188925,
+      "user": "1247173440780370035",
+      "name": "__.hatchson.__",
+      "role": "owner",
       "logUpload": false
     }
   ]
